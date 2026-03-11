@@ -57,6 +57,100 @@ SHORTCUTS = {
     "sportsbets": r"C:\Users\Cmcna\Dev\tools\shortcuts\claude-sports-bets.bat",
 }
 
+# --- Obsidian ---
+OBSIDIAN_VAULT = Path(r"C:\Users\Cmcna\Dev\notes")
+OBSIDIAN_DAILY = OBSIDIAN_VAULT / "daily"
+
+# --- Hotkeys Reference ---
+HOTKEYS = {
+    "CTRL (this app)": [
+        ("q", "Quit"),
+        ("d", "Toggle theme"),
+        ("r", "Refresh all"),
+        ("Ctrl+N", "New chat"),
+        ("Ctrl+L", "Clear log"),
+        ("Escape", "Focus input"),
+        ("F1", "Help"),
+        ("WASD/Arrows", "Snake controls"),
+        ("Enter", "Start/restart snake"),
+    ],
+    "Claude Code": [
+        ("Ctrl+C", "Cancel current operation"),
+        ("Ctrl+D", "Exit Claude Code"),
+        ("Enter", "Send message"),
+        ("Shift+Enter", "New line in message"),
+        ("Tab", "Accept suggestion"),
+        ("Escape", "Cancel/dismiss"),
+        ("/help", "Show commands"),
+        ("/clear", "Clear conversation"),
+        ("/compact", "Compact context"),
+        ("/model", "Switch model"),
+        ("/cost", "Show token usage"),
+    ],
+    "VS Code": [
+        ("Ctrl+Shift+P", "Command palette"),
+        ("Ctrl+P", "Quick open file"),
+        ("Ctrl+Shift+F", "Search all files"),
+        ("Ctrl+`", "Toggle terminal"),
+        ("Ctrl+B", "Toggle sidebar"),
+        ("Ctrl+/", "Toggle comment"),
+        ("Ctrl+D", "Select next occurrence"),
+        ("Ctrl+Shift+K", "Delete line"),
+        ("Alt+Up/Down", "Move line"),
+        ("Ctrl+Shift+E", "File explorer"),
+    ],
+    "Obsidian": [
+        ("Ctrl+N", "New note"),
+        ("Ctrl+O", "Open note"),
+        ("Ctrl+P", "Command palette"),
+        ("Ctrl+E", "Toggle edit/preview"),
+        ("Ctrl+K", "Insert link"),
+        ("Ctrl+Shift+F", "Search vault"),
+        ("Ctrl+G", "Open graph"),
+        ("Ctrl+,", "Settings"),
+        ("Alt+Click", "Open in new pane"),
+        ("Ctrl+W", "Close pane"),
+    ],
+    "Windows Terminal": [
+        ("Ctrl+Shift+T", "New tab"),
+        ("Ctrl+Shift+W", "Close tab"),
+        ("Ctrl+Tab", "Next tab"),
+        ("Ctrl+Shift+Tab", "Previous tab"),
+        ("Alt+Shift+D", "Split pane"),
+        ("Alt+Arrow", "Move between panes"),
+        ("Ctrl+Shift+P", "Command palette"),
+        ("Ctrl+,", "Settings"),
+        ("Ctrl+Shift+Space", "Dropdown menu"),
+        ("F11", "Fullscreen"),
+    ],
+    "Git": [
+        ("git status", "Check status"),
+        ("git add -p", "Interactive staging"),
+        ("git diff --staged", "See staged changes"),
+        ("git log --oneline -20", "Recent commits"),
+        ("git stash", "Stash changes"),
+        ("git stash pop", "Restore stash"),
+        ("git branch -a", "All branches"),
+        ("git checkout -b name", "New branch"),
+        ("git rebase -i HEAD~3", "Interactive rebase"),
+        ("git reflog", "Recovery log"),
+    ],
+}
+
+# --- Skills repos to browse ---
+SKILLS_REPOS = [
+    ("anthropics/skills", "Official Anthropic skills"),
+    ("hesreallyhim/awesome-claude-code", "Curated skills, hooks, plugins"),
+    ("travisvn/awesome-claude-skills", "Claude skills collection"),
+    ("daymade/claude-code-skills", "Skills marketplace"),
+    ("Textualize/textual", "Textual TUI framework"),
+    ("aperepel/textual-tui-skill", "Textual TUI skill for Claude"),
+    ("nextlevelbuilder/ui-ux-pro-max-skill", "UI/UX design skill"),
+    ("Dammyjay93/interface-design", "Design engineering skill"),
+    ("batrachianai/toad", "Universal AI terminal UI"),
+    ("darrenburns/elia", "Terminal LLM chat client"),
+]
+
 
 def check_port(port: int) -> bool:
     """Check if a port is in use."""
@@ -494,6 +588,59 @@ class CTRL(App):
     Rule {
         color: #1a1a2e;
     }
+
+    /* ── Journal ── */
+    #journal-container {
+        padding: 1 2;
+        background: #0a0a0f;
+        height: 1fr;
+    }
+    #journal-input-bar {
+        height: 3;
+        layout: horizontal;
+        padding: 0 1;
+        background: #0d0d14;
+        border-top: solid #1a1a2e;
+        dock: bottom;
+    }
+    #journal-input {
+        width: 1fr;
+        background: #12121a;
+        color: #e0e0f0;
+        border: solid #1a1a2e;
+    }
+    #journal-input:focus {
+        border: solid #00ff88;
+    }
+    #btn-journal {
+        width: 10;
+        margin-left: 1;
+        background: #00ff88;
+        color: #0a0a0f;
+        border: none;
+    }
+    #journal-display {
+        height: 1fr;
+        padding: 1 2;
+        background: #08080d;
+        border: solid #1a1a2e;
+        overflow-y: auto;
+    }
+
+    /* ── Hotkeys ── */
+    #hotkeys-container {
+        padding: 1 2;
+        background: #0a0a0f;
+        height: 1fr;
+        overflow-y: auto;
+    }
+
+    /* ── Skills ── */
+    #skills-container {
+        padding: 1 2;
+        background: #0a0a0f;
+        height: 1fr;
+    }
     """
 
     TITLE = "CTRL"
@@ -557,6 +704,25 @@ class CTRL(App):
                 with ScrollableContainer(id="sysmon-container"):
                     yield Static("", id="sysmon-display")
 
+            # ── Journal ──
+            with TabPane("Journal", id="tab-journal"):
+                with Vertical(id="journal-container"):
+                    yield ScrollableContainer(id="journal-display")
+                    with Horizontal(id="journal-input-bar"):
+                        yield Input(placeholder="log an entry... (auto-timestamped to Obsidian daily note)", id="journal-input")
+                        yield Button("log", id="btn-journal")
+
+            # ── Hotkeys ──
+            with TabPane("Keys", id="tab-hotkeys"):
+                with ScrollableContainer(id="hotkeys-container"):
+                    yield Static("", id="hotkeys-display")
+
+            # ── Skills ──
+            with TabPane("Skills", id="tab-skills"):
+                with Vertical(id="skills-container"):
+                    yield DataTable(id="skills-table")
+                    yield Static("\n[dim]press r to refresh star counts from github[/]", id="skills-hint")
+
             # ── Snake Game ──
             with TabPane("Snake", id="tab-snake"):
                 yield SnakeGame()
@@ -585,6 +751,9 @@ class CTRL(App):
         self._log("[#a855f7]CTRL[/] initialized")
         self._setup_ports_table()
         self._setup_projects_table()
+        self._setup_hotkeys()
+        self._setup_skills_table()
+        self._load_todays_journal()
         self.refresh_ports()
         self._update_sysmon()
         self.set_interval(30, self.refresh_ports)
@@ -634,6 +803,139 @@ class CTRL(App):
     def _bar(pct: float, width: int = 30) -> str:
         filled = int(pct / 100 * width)
         return "█" * filled + "░" * (width - filled)
+
+    # ─────────────────────────────────────────
+    #  Journal (Obsidian Daily Notes)
+    # ─────────────────────────────────────────
+
+    def _get_daily_note_path(self) -> Path:
+        today = datetime.now().strftime("%Y-%m-%d")
+        return OBSIDIAN_DAILY / f"{today}.md"
+
+    def _load_todays_journal(self) -> None:
+        """Load today's daily note into the journal display."""
+        path = self._get_daily_note_path()
+        try:
+            display = self.query_one("#journal-display", ScrollableContainer)
+            if path.exists():
+                content = path.read_text(encoding="utf-8")
+                display.mount(Static(f"[dim]{path.name}[/]\n\n{content}"))
+                self._log(f"loaded journal: {path.name}")
+            else:
+                display.mount(Static(f"[dim]no daily note yet for {datetime.now().strftime('%Y-%m-%d')}. type below to start.[/]"))
+        except Exception:
+            pass
+
+    def _journal_entry(self, text: str) -> None:
+        """Append a timestamped entry to today's Obsidian daily note."""
+        path = self._get_daily_note_path()
+        OBSIDIAN_DAILY.mkdir(parents=True, exist_ok=True)
+
+        now = datetime.now()
+        timestamp = now.strftime("%H:%M")
+        hour_block = now.strftime("%I %p").lstrip("0")
+
+        # Read existing content
+        existing = ""
+        if path.exists():
+            existing = path.read_text(encoding="utf-8")
+
+        # If file is new, add frontmatter
+        if not existing:
+            existing = (
+                f"---\ndate: {now.strftime('%Y-%m-%d')}\ntags: [daily]\n---\n\n"
+                f"# {now.strftime('%A, %B %d, %Y')}\n\n"
+            )
+
+        # Check if hour block exists
+        hour_header = f"## {hour_block}"
+        if hour_header not in existing:
+            existing += f"\n{hour_header}\n"
+
+        # Append entry under the hour
+        entry_line = f"- **{timestamp}** — {text}\n"
+        # Insert after the hour header
+        idx = existing.index(hour_header) + len(hour_header)
+        # Find end of this section (next ## or end of file)
+        next_section = existing.find("\n## ", idx + 1)
+        if next_section == -1:
+            existing += entry_line
+        else:
+            existing = existing[:next_section] + entry_line + existing[next_section:]
+
+        path.write_text(existing, encoding="utf-8")
+
+        # Update display
+        try:
+            display = self.query_one("#journal-display", ScrollableContainer)
+            display.mount(Static(f"[#00ff88]{timestamp}[/] [dim]—[/] {text}"))
+            display.scroll_end()
+        except Exception:
+            pass
+
+        self._log(f"journal: logged to {path.name}")
+
+    # ─────────────────────────────────────────
+    #  Hotkeys Reference
+    # ─────────────────────────────────────────
+
+    def _setup_hotkeys(self) -> None:
+        """Render all hotkey sections."""
+        lines = []
+        for app_name, keys in HOTKEYS.items():
+            lines.append(f"[bold #a855f7]{app_name}[/]")
+            lines.append("")
+            for key, desc in keys:
+                lines.append(f"  [bold #00d4ff]{key:<22}[/] [#e0e0f0]{desc}[/]")
+            lines.append("")
+
+        try:
+            self.query_one("#hotkeys-display", Static).update("\n".join(lines))
+        except Exception:
+            pass
+
+    # ─────────────────────────────────────────
+    #  Skills Browser
+    # ─────────────────────────────────────────
+
+    def _setup_skills_table(self) -> None:
+        table = self.query_one("#skills-table", DataTable)
+        table.add_columns("Repo", "Description", "Stars")
+        for repo, desc in SKILLS_REPOS:
+            table.add_row(repo, desc, "...")
+        self._fetch_skills_stars()
+
+    @work(thread=True)
+    def _fetch_skills_stars(self) -> None:
+        """Fetch star counts from GitHub API."""
+        results = []
+        for repo, desc in SKILLS_REPOS:
+            try:
+                result = subprocess.run(
+                    ["gh", "api", f"repos/{repo}", "--jq", ".stargazers_count"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                stars = result.stdout.strip() if result.returncode == 0 else "?"
+                # Format with commas
+                try:
+                    stars = f"{int(stars):,}"
+                except ValueError:
+                    pass
+            except Exception:
+                stars = "?"
+            results.append((repo, desc, stars))
+
+        self.app.call_from_thread(self._update_skills_table, results)
+
+    def _update_skills_table(self, results: list) -> None:
+        try:
+            table = self.query_one("#skills-table", DataTable)
+            table.clear()
+            for row in results:
+                table.add_row(*row)
+            self._log(f"skills: fetched stars for {len(results)} repos")
+        except Exception:
+            pass
 
     # ─────────────────────────────────────────
     #  Port Scanning
@@ -836,6 +1138,11 @@ class CTRL(App):
             event.input.value = ""
             self._run_shell_command(cmd)
 
+        elif event.input.id == "journal-input" and event.value.strip():
+            entry = event.value.strip()
+            event.input.value = ""
+            self._journal_entry(entry)
+
         elif event.input.id == "api-key-input" and event.value.strip():
             self._save_api_key(event.value.strip())
 
@@ -847,6 +1154,10 @@ class CTRL(App):
                 self.on_input_submitted(Input.Submitted(inp, inp.value))
         elif bid == "btn-shell-run":
             inp = self.query_one("#shell-input", Input)
+            if inp.value.strip():
+                self.on_input_submitted(Input.Submitted(inp, inp.value))
+        elif bid == "btn-journal":
+            inp = self.query_one("#journal-input", Input)
             if inp.value.strip():
                 self.on_input_submitted(Input.Submitted(inp, inp.value))
         elif bid == "btn-save-key":
@@ -886,6 +1197,11 @@ class CTRL(App):
         elif cmd == "/git":
             self._run_shell_command("git status")
             self._add_system_message("running git status in shell tab...")
+        elif cmd.startswith("/log "):
+            entry = command[5:].strip()
+            if entry:
+                self._journal_entry(entry)
+                self._add_system_message(f"logged to journal: {entry[:50]}...")
         elif cmd == "/help":
             self._add_system_message(
                 "/clear — clear chat\n"
@@ -894,6 +1210,7 @@ class CTRL(App):
                 "/model <id> — switch model\n"
                 "/sys — refresh system stats\n"
                 "/git — run git status\n"
+                "/log <text> — add journal entry\n"
                 "/help — this"
             )
         else:
