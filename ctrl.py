@@ -178,10 +178,12 @@ def get_system_stats() -> dict:
         return {}
 
 
+GPT_MODEL = "gpt-4o"
+
 def load_config() -> dict:
     if CONFIG_PATH.exists():
         return json.loads(CONFIG_PATH.read_text())
-    return {"api_key": "", "model": CLAUDE_MODEL}
+    return {"api_key": "", "model": CLAUDE_MODEL, "openai_key": "", "gpt_enabled": False}
 
 
 def save_config(config: dict):
@@ -291,16 +293,16 @@ class SnakeGame(Static):
                 if x == 0 or x == self.GAME_W - 1 or y == 0 or y == self.GAME_H - 1:
                     row.append("[#1a1a2e]█[/]")
                 elif (x, y) == self.snake[0]:
-                    row.append("[bold #a855f7]@[/]")
+                    row.append("[bold #3b82f6]@[/]")
                 elif (x, y) in self.snake:
-                    row.append("[#7c3aed]o[/]")
+                    row.append("[#2563eb]o[/]")
                 elif (x, y) == self.food:
                     row.append("[bold #ff4444]★[/]")
                 else:
                     row.append(" ")
             grid.append("".join(row))
 
-        header = f"  [#a855f7]SNAKE[/]  [dim]score:[/] [bold #00ff88]{self.score}[/]"
+        header = f"  [#3b82f6]SNAKE[/]  [dim]score:[/] [bold #00ff88]{self.score}[/]"
         if self.game_over:
             header += "  [bold #ff4444]GAME OVER[/] [dim]press ENTER to restart[/]"
         elif not self.running:
@@ -326,7 +328,7 @@ class ChatMessage(Static):
             )
         elif self.role == "assistant":
             yield Static(
-                f"[bold #a855f7]claude[/] [dim]{self.timestamp}[/]",
+                f"[bold #3b82f6]claude[/] [dim]{self.timestamp}[/]",
                 classes="msg-header",
             )
             yield Static(self.content, classes="msg-claude")
@@ -348,7 +350,7 @@ class CTRL(App):
 
     Header {
         background: #0d0d14;
-        color: #a855f7;
+        color: #3b82f6;
     }
 
     Footer {
@@ -370,11 +372,11 @@ class CTRL(App):
         color: #666680;
     }
     Tab.-active {
-        color: #a855f7;
+        color: #3b82f6;
         background: #12121a;
     }
     Underline > .underline--bar {
-        color: #a855f7;
+        color: #3b82f6;
         background: #1a1a2e;
     }
 
@@ -388,7 +390,7 @@ class CTRL(App):
         padding: 1 2;
         background: #0a0a0f;
         scrollbar-color: #333355;
-        scrollbar-color-hover: #a855f7;
+        scrollbar-color-hover: #2563eb;
     }
     #chat-input-bar {
         height: 3;
@@ -405,20 +407,20 @@ class CTRL(App):
         border: solid #1a1a2e;
     }
     #chat-input:focus {
-        border: solid #a855f7;
+        border: solid #2563eb;
     }
     #btn-send {
         width: 10;
         margin-left: 1;
-        background: #a855f7;
+        background: #2563eb;
         color: #0a0a0f;
         border: none;
     }
     .msg-user {
         margin: 1 0 0 6;
         padding: 1 2;
-        background: #111128;
-        border: solid #1a1a3e;
+        background: #0f1520;
+        border: solid #1a2038;
     }
     .msg-header {
         margin: 1 0 0 0;
@@ -428,7 +430,13 @@ class CTRL(App):
         margin: 0 6 0 0;
         padding: 1 2;
         background: #0f0f1a;
-        border: solid #2a1a3e;
+        border: solid #1a2a3e;
+    }
+    .msg-gpt {
+        margin: 0 6 0 0;
+        padding: 1 2;
+        background: #0f1a15;
+        border: solid #1a3e2a;
     }
     .msg-system {
         margin: 1 0;
@@ -438,7 +446,7 @@ class CTRL(App):
     #streaming-indicator {
         height: 1;
         margin: 0 2;
-        color: #a855f7;
+        color: #3b82f6;
     }
 
     /* ── Services/Ports ── */
@@ -449,7 +457,7 @@ class CTRL(App):
     }
     DataTable > .datatable--header {
         background: #0d0d14;
-        color: #a855f7;
+        color: #3b82f6;
         text-style: bold;
     }
     DataTable > .datatable--cursor {
@@ -531,10 +539,10 @@ class CTRL(App):
     }
     #launch-container Button:hover {
         background: #1a1a2e;
-        border: solid #a855f7;
+        border: solid #2563eb;
     }
     #launch-container Button.-active {
-        background: #a855f7;
+        background: #2563eb;
     }
 
     /* ── Log Panel ── */
@@ -561,7 +569,7 @@ class CTRL(App):
         width: 60;
         height: auto;
         padding: 2 3;
-        border: solid #a855f7;
+        border: solid #2563eb;
         background: #0d0d14;
     }
     #api-key-input {
@@ -571,7 +579,7 @@ class CTRL(App):
         border: solid #1a1a2e;
     }
     #btn-save-key {
-        background: #a855f7;
+        background: #2563eb;
         color: #0a0a0f;
         border: none;
         width: 100%;
@@ -671,7 +679,7 @@ class CTRL(App):
                 if not self.config.get("api_key"):
                     with Container(id="setup-container"):
                         with Vertical(id="setup-box"):
-                            yield Static("[bold #a855f7]CTRL[/] [dim]Terminal Command Center[/]\n")
+                            yield Static("[bold #3b82f6]CTRL[/] [dim]Terminal Command Center[/]\n")
                             yield Static("Enter your Anthropic API key to connect.\n[dim]https://console.anthropic.com/settings/keys[/]\n")
                             yield Input(placeholder="sk-ant-...", id="api-key-input", password=True)
                             yield Button("Connect", id="btn-save-key")
@@ -730,7 +738,7 @@ class CTRL(App):
             # ── Launch ──
             with TabPane("Launch", id="tab-launch"):
                 with Vertical(id="launch-container"):
-                    yield Static("[bold #a855f7]Launch Sessions[/]\n")
+                    yield Static("[bold #3b82f6]Launch Sessions[/]\n")
                     yield Button("PCM / ShiftPay", id="launch-pcm")
                     yield Button("Poker Software", id="launch-poker")
                     yield Button("Crewchief", id="launch-crewchief")
@@ -748,7 +756,7 @@ class CTRL(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self._log("[#a855f7]CTRL[/] initialized")
+        self._log("[#3b82f6]CTRL[/] initialized")
         self._setup_ports_table()
         self._setup_projects_table()
         self._setup_hotkeys()
@@ -784,7 +792,7 @@ class CTRL(App):
         disk_color = "#00ff88" if stats["disk_pct"] < 70 else "#ffaa00" if stats["disk_pct"] < 90 else "#ff4444"
 
         display = (
-            f"[bold #a855f7]System Resources[/]\n\n"
+            f"[bold #3b82f6]System Resources[/]\n\n"
             f"  [dim]CPU[/]    [{cpu_color}]{cpu_bar}[/]  [{cpu_color}]{stats['cpu']:5.1f}%[/]\n\n"
             f"  [dim]MEM[/]    [{mem_color}]{mem_bar}[/]  [{mem_color}]{stats['mem_used']:.1f} / {stats['mem_total']:.1f} GB ({stats['mem_pct']:.0f}%)[/]\n\n"
             f"  [dim]DISK[/]   [{disk_color}]{disk_bar}[/]  [{disk_color}]{stats['disk_used']:.0f} / {stats['disk_total']:.0f} GB ({stats['disk_pct']:.0f}%)[/]\n\n"
@@ -883,7 +891,7 @@ class CTRL(App):
         """Render all hotkey sections."""
         lines = []
         for app_name, keys in HOTKEYS.items():
-            lines.append(f"[bold #a855f7]{app_name}[/]")
+            lines.append(f"[bold #3b82f6]{app_name}[/]")
             lines.append("")
             for key, desc in keys:
                 lines.append(f"  [bold #00d4ff]{key:<22}[/] [#e0e0f0]{desc}[/]")
@@ -970,16 +978,22 @@ class CTRL(App):
 
     def _setup_projects_table(self) -> None:
         table = self.query_one("#projects-table", DataTable)
-        table.add_columns("Project", "Path", "Branch", "Status")
+        table.add_columns("Project", "Stack", "Branch", "Status")
         projects = [
-            ("Poker Club Manager", r"C:\Users\Cmcna\Dev\projects\poker-club-manager"),
-            ("ShiftPay", r"C:\Users\Cmcna\Dev\projects\shiftpay"),
-            ("Sports Bets", r"C:\Users\Cmcna\Dev\projects\sports-bets"),
-            ("Crewchief", r"C:\Users\Cmcna\Dev\projects\crewchief"),
-            ("X Manager", r"C:\Users\Cmcna\Dev\projects\x-manager"),
-            ("ReviewPush", r"C:\Users\Cmcna\Dev\projects\reviewpush"),
+            ("Poker Software", r"C:\Users\Cmcna\Dev\projects\poker-software", "Vite + Python"),
+            ("X Manager", r"C:\Users\Cmcna\Dev\projects\x-manager", "Vite + FastAPI"),
+            ("ShiftPay", r"C:\Users\Cmcna\Dev\projects\shiftpay", "React + Supabase"),
+            ("Poker Club Manager", r"C:\Users\Cmcna\Dev\projects\poker-manager", "Electron + Python"),
+            ("Crewchief", r"C:\Users\Cmcna\Dev\projects\crewchief", "Flet + FastAPI"),
+            ("Client Workspace", r"C:\Users\Cmcna\Dev\projects\client-workspace", "HTML + CF Worker"),
+            ("Content Machine", r"C:\Users\Cmcna\Dev\projects\content-machine", "Python pipeline"),
+            ("X Coder Bot", r"C:\Users\Cmcna\Dev\projects\x-coder-bot", "Python bot"),
+            ("X Video Generator", r"C:\Users\Cmcna\Dev\projects\x-video-generator", "Python"),
+            ("Shorts Maker", r"C:\Users\Cmcna\Dev\projects\shorts-maker", "Python"),
+            ("Betting Tracker", r"C:\Users\Cmcna\Dev\projects\betting-tracker", "Python"),
+            ("CTRL", r"C:\Users\Cmcna\Dev\projects\ctrl", "Textual TUI"),
         ]
-        for name, path in projects:
+        for name, path, stack in projects:
             branch = "N/A"
             try:
                 result = subprocess.run(
@@ -992,7 +1006,7 @@ class CTRL(App):
                 pass
             exists = Path(path).exists()
             status = "[green]found[/]" if exists else "[red]missing[/]"
-            table.add_row(name, path, branch, status)
+            table.add_row(name, stack, branch, status)
 
     # ─────────────────────────────────────────
     #  Claude Chat
@@ -1016,21 +1030,23 @@ class CTRL(App):
 
     @work(thread=True)
     def _send_to_claude(self, user_message: str) -> None:
+        self.messages.append({"role": "user", "content": user_message})
+        sys_prompt = (
+            "You are Claude inside CTRL, a terminal command center. "
+            "Be concise, direct, and useful. The user is a developer "
+            "working on multiple projects. Use markdown formatting."
+        )
+
+        # Claude response
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=self.config["api_key"])
-            self.messages.append({"role": "user", "content": user_message})
-
-            self.app.call_from_thread(self._set_streaming_indicator, "thinking...")
+            self.app.call_from_thread(self._set_streaming_indicator, "claude thinking...")
 
             response = client.messages.create(
                 model=self.config.get("model", CLAUDE_MODEL),
                 max_tokens=4096,
-                system=(
-                    "You are Claude inside CTRL, a terminal command center. "
-                    "Be concise, direct, and useful. The user is a developer "
-                    "working on multiple projects. Use markdown formatting."
-                ),
+                system=sys_prompt,
                 messages=self.messages,
             )
 
@@ -1038,18 +1054,57 @@ class CTRL(App):
             self.messages.append({"role": "assistant", "content": reply})
 
             self.app.call_from_thread(self._add_chat_message, "assistant", reply)
-            self.app.call_from_thread(self._set_streaming_indicator, "")
             self.app.call_from_thread(self._log, f"claude: {response.usage.output_tokens} tokens")
 
         except Exception as e:
             err = str(e)[:120]
-            self.app.call_from_thread(self._add_system_message, f"error: {err}")
-            self.app.call_from_thread(self._set_streaming_indicator, "")
+            self.app.call_from_thread(self._add_system_message, f"claude error: {err}")
+
+        # GPT response (if enabled)
+        if self.config.get("gpt_enabled") and self.config.get("openai_key"):
+            try:
+                import openai
+                gpt_client = openai.OpenAI(api_key=self.config["openai_key"])
+                self.app.call_from_thread(self._set_streaming_indicator, "gpt thinking...")
+
+                gpt_messages = [{"role": "system", "content": sys_prompt}]
+                gpt_messages.extend(self.messages)
+
+                gpt_response = gpt_client.chat.completions.create(
+                    model=GPT_MODEL,
+                    max_tokens=4096,
+                    messages=gpt_messages,
+                )
+
+                gpt_reply = gpt_response.choices[0].message.content
+                self.app.call_from_thread(self._add_gpt_message, gpt_reply)
+                tokens = gpt_response.usage.completion_tokens if gpt_response.usage else "?"
+                self.app.call_from_thread(self._log, f"gpt: {tokens} tokens")
+
+            except Exception as e:
+                err = str(e)[:120]
+                self.app.call_from_thread(self._add_system_message, f"gpt error: {err}")
+
+        self.app.call_from_thread(self._set_streaming_indicator, "")
+
+    def _add_gpt_message(self, content: str) -> None:
+        """Add a GPT response message to chat."""
+        try:
+            container = self.query_one("#chat-messages", ScrollableContainer)
+            ts = datetime.now().strftime("%H:%M:%S")
+            container.mount(Static(
+                f"[bold #10b981]gpt[/] [dim]{ts}[/]",
+                classes="msg-header",
+            ))
+            container.mount(Static(content, classes="msg-gpt"))
+            container.scroll_end()
+        except Exception:
+            pass
 
     def _set_streaming_indicator(self, text: str) -> None:
         try:
             self.query_one("#streaming-indicator", Static).update(
-                f"[italic #a855f7]{text}[/]" if text else ""
+                f"[italic #3b82f6]{text}[/]" if text else ""
             )
         except Exception:
             pass
@@ -1197,17 +1252,32 @@ class CTRL(App):
         elif cmd == "/git":
             self._run_shell_command("git status")
             self._add_system_message("running git status in shell tab...")
+        elif cmd == "/gpt":
+            enabled = self.config.get("gpt_enabled", False)
+            self.config["gpt_enabled"] = not enabled
+            save_config(self.config)
+            state = "ON" if not enabled else "OFF"
+            self._add_system_message(f"gpt responses: {state}")
+            self._log(f"gpt toggled {state}")
+        elif cmd.startswith("/gpt-key "):
+            key = cmd.split(" ", 1)[1].strip()
+            self.config["openai_key"] = key
+            save_config(self.config)
+            self._add_system_message("openai key saved")
         elif cmd.startswith("/log "):
             entry = command[5:].strip()
             if entry:
                 self._journal_entry(entry)
                 self._add_system_message(f"logged to journal: {entry[:50]}...")
         elif cmd == "/help":
+            gpt_status = "ON" if self.config.get("gpt_enabled") else "OFF"
             self._add_system_message(
                 "/clear — clear chat\n"
                 "/ports — scan ports\n"
                 "/model — current model\n"
                 "/model <id> — switch model\n"
+                f"/gpt — toggle gpt responses ({gpt_status})\n"
+                "/gpt-key <key> — set openai api key\n"
                 "/sys — refresh system stats\n"
                 "/git — run git status\n"
                 "/log <text> — add journal entry\n"
