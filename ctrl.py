@@ -158,6 +158,30 @@ SKILLS_REPOS = [
     ("darrenburns/elia", "Terminal LLM chat client"),
 ]
 
+# --- Trending / top starred AI repos ---
+TRENDING_REPOS = [
+    ("anthropics/claude-code", "Claude Code CLI"),
+    ("anthropics/anthropic-sdk-python", "Anthropic Python SDK"),
+    ("openai/openai-python", "OpenAI Python SDK"),
+    ("langchain-ai/langchain", "LLM app framework"),
+    ("run-llama/llama_index", "LLM data framework"),
+    ("ggerganov/llama.cpp", "LLM inference in C++"),
+    ("ollama/ollama", "Run LLMs locally"),
+    ("huggingface/transformers", "ML model library"),
+    ("Significant-Gravitas/AutoGPT", "Autonomous AI agents"),
+    ("microsoft/autogen", "Multi-agent framework"),
+    ("crewAIInc/crewAI", "AI agent orchestration"),
+    ("All-Hands-AI/OpenHands", "AI software dev agents"),
+    ("pydantic/pydantic-ai", "Agent framework"),
+    ("charmbracelet/bubbletea", "Go TUI framework"),
+    ("ratatui/ratatui", "Rust TUI framework"),
+    ("vadimdemedes/ink", "React CLI framework"),
+    ("Textualize/rich", "Rich terminal formatting"),
+    ("commaai/openpilot", "Open source driver assist"),
+    ("frdel/agent-zero", "Organic AI framework"),
+    ("browser-use/browser-use", "AI browser automation"),
+]
+
 
 def check_port(port: int) -> bool:
     """Check if a port is in use."""
@@ -657,6 +681,13 @@ class CTRL(App):
         height: 1fr;
     }
 
+    /* ── Trending ── */
+    #trending-container {
+        padding: 1 2;
+        background: #0a0a0f;
+        height: 1fr;
+    }
+
     /* ── Notes ── */
     #notes-container {
         height: 1fr;
@@ -795,6 +826,12 @@ class CTRL(App):
                     yield DataTable(id="skills-table")
                     yield Static("\n[dim]press r to refresh star counts from github[/]", id="skills-hint")
 
+            # ── Trending ──
+            with TabPane("Trending", id="tab-trending"):
+                with Vertical(id="trending-container"):
+                    yield DataTable(id="trending-table")
+                    yield Static("\n[dim]click a row to open on github  |  press r to refresh[/]", id="trending-hint")
+
             # ── Snake ──
             with TabPane("Snake", id="tab-snake"):
                 yield SnakeGame()
@@ -819,6 +856,7 @@ class CTRL(App):
         self._setup_projects_table()
         self._setup_hotkeys()
         self._setup_skills_table()
+        self._setup_trending_table()
         self._setup_notes_table()
         self._load_todays_journal()
         self.refresh_ports()
@@ -1061,6 +1099,67 @@ class CTRL(App):
             self._log(f"skills: fetched stars for {len(results)} repos")
         except Exception:
             pass
+
+    # ─────────────────────────────────────────
+    #  Trending AI Repos
+    # ─────────────────────────────────────────
+
+    def _setup_trending_table(self) -> None:
+        table = self.query_one("#trending-table", DataTable)
+        table.add_columns("Repo", "Description", "Stars")
+        for repo, desc in TRENDING_REPOS:
+            table.add_row(repo, desc, "...")
+        self._fetch_trending_stars()
+
+    @work(thread=True)
+    def _fetch_trending_stars(self) -> None:
+        results = []
+        for repo, desc in TRENDING_REPOS:
+            try:
+                result = subprocess.run(
+                    ["gh", "api", f"repos/{repo}", "--jq", ".stargazers_count"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                stars = result.stdout.strip() if result.returncode == 0 else "?"
+                try:
+                    stars = f"{int(stars):,}"
+                except ValueError:
+                    pass
+            except Exception:
+                stars = "?"
+            results.append((repo, desc, stars))
+
+        self.app.call_from_thread(self._update_trending_table, results)
+
+    def _update_trending_table(self, results: list) -> None:
+        try:
+            table = self.query_one("#trending-table", DataTable)
+            table.clear()
+            # Sort by stars descending
+            def star_val(r):
+                try:
+                    return int(r[2].replace(",", ""))
+                except (ValueError, AttributeError):
+                    return 0
+            results.sort(key=star_val, reverse=True)
+            for row in results:
+                table.add_row(*row)
+            self._log(f"trending: fetched stars for {len(results)} repos")
+        except Exception:
+            pass
+
+    def _open_repo_from_table(self, table_id: str) -> None:
+        """Open selected repo from a DataTable in browser."""
+        try:
+            table = self.query_one(f"#{table_id}", DataTable)
+            row_key = table.cursor_row
+            if row_key is not None:
+                repo = table.get_cell_at((row_key, 0))
+                url = f"https://github.com/{repo}"
+                subprocess.Popen(["cmd", "/c", "start", url], shell=True)
+                self._log(f"opening {url}")
+        except Exception as e:
+            self._log(f"[yellow]couldn't open repo: {e}[/]")
 
     # ─────────────────────────────────────────
     #  Port Scanning
@@ -1320,6 +1419,12 @@ class CTRL(App):
 
         elif event.input.id == "api-key-input" and event.value.strip():
             self._save_api_key(event.value.strip())
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handle double-click / enter on a table row."""
+        table_id = event.data_table.id
+        if table_id in ("skills-table", "trending-table"):
+            self._open_repo_from_table(table_id)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         bid = event.button.id
