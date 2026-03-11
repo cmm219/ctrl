@@ -50,11 +50,18 @@ PORTS = [
 ]
 
 SHORTCUTS = {
-    "pcm": r"C:\Users\Cmcna\Dev\tools\shortcuts\claude-pcm.bat",
-    "poker": r"C:\Users\Cmcna\Dev\tools\shortcuts\claude-poker.bat",
-    "crewchief": r"C:\Users\Cmcna\Dev\tools\shortcuts\claude-crewchief.bat",
-    "xmanager": r"C:\Users\Cmcna\Dev\tools\shortcuts\claude-x-manager.bat",
-    "sportsbets": r"C:\Users\Cmcna\Dev\tools\shortcuts\claude-sports-bets.bat",
+    "pcm": r"C:\Users\Cmcna\Dev\tools\shortcuts\PCM Claude.bat",
+    "pcm-dskip": r"C:\Users\Cmcna\Dev\tools\shortcuts\PCM CLAUDE DSkipP.bat",
+    "xmanager": r"C:\Users\Cmcna\Dev\tools\shortcuts\X Manager Claude.bat",
+    "crewchief": r"C:\Users\Cmcna\Dev\tools\shortcuts\CrewChief Claude.bat",
+    "crewchief-app": r"C:\Users\Cmcna\Dev\tools\shortcuts\CrewChief App.bat",
+    "shiftpay": r"C:\Users\Cmcna\Dev\tools\shortcuts\ShiftPay Claude.bat",
+    "reviewpush": r"C:\Users\Cmcna\Dev\tools\shortcuts\ReviewPush Claude.bat",
+    "nbabots": r"C:\Users\Cmcna\Dev\tools\shortcuts\NBA BOTS 2026 Claude.bat",
+    "paperbets": r"C:\Users\Cmcna\Dev\tools\shortcuts\Paper Bets Claude.bat",
+    "planner": r"C:\Users\Cmcna\Dev\tools\shortcuts\Chris Planner Claude.bat",
+    "startbots": r"C:\Users\Cmcna\Dev\tools\shortcuts\start_bots.bat",
+    "stopbots": r"C:\Users\Cmcna\Dev\tools\shortcuts\stop_bots.bat",
 }
 
 # --- Obsidian ---
@@ -649,6 +656,39 @@ class CTRL(App):
         background: #0a0a0f;
         height: 1fr;
     }
+
+    /* ── Notes ── */
+    #notes-container {
+        height: 1fr;
+        background: #0a0a0f;
+    }
+    #notes-table {
+        height: 1fr;
+    }
+    #notes-input-bar {
+        height: 3;
+        layout: horizontal;
+        padding: 0 1;
+        background: #0d0d14;
+        border-top: solid #1a1a2e;
+        dock: bottom;
+    }
+    #notes-search {
+        width: 1fr;
+        background: #12121a;
+        color: #e0e0f0;
+        border: solid #1a1a2e;
+    }
+    #notes-search:focus {
+        border: solid #3b82f6;
+    }
+    #btn-notes-open {
+        width: 10;
+        margin-left: 1;
+        background: #3b82f6;
+        color: #0a0a0f;
+        border: none;
+    }
     """
 
     TITLE = "CTRL"
@@ -691,13 +731,21 @@ class CTRL(App):
                             yield Input(placeholder="message claude... (enter to send, /help for commands)", id="chat-input")
                             yield Button(">>", id="btn-send")
 
-            # ── Shell ──
-            with TabPane("Shell", id="tab-shell"):
-                with Vertical(id="shell-container"):
-                    yield RichLog(id="shell-output", highlight=True, markup=True, max_lines=500)
-                    with Horizontal(id="shell-input-bar"):
-                        yield Input(placeholder="$ run a command...", id="shell-input")
-                        yield Button("run", id="btn-shell-run")
+            # ── Journal ──
+            with TabPane("Journal", id="tab-journal"):
+                with Vertical(id="journal-container"):
+                    yield ScrollableContainer(id="journal-display")
+                    with Horizontal(id="journal-input-bar"):
+                        yield Input(placeholder="log an entry... (auto-timestamped to Obsidian daily note)", id="journal-input")
+                        yield Button("log", id="btn-journal")
+
+            # ── Notes (Obsidian) ──
+            with TabPane("Notes", id="tab-notes"):
+                with Vertical(id="notes-container"):
+                    yield DataTable(id="notes-table")
+                    with Horizontal(id="notes-input-bar"):
+                        yield Input(placeholder="search notes... (enter to filter)", id="notes-search")
+                        yield Button("open", id="btn-notes-open")
 
             # ── Services ──
             with TabPane("Services", id="tab-ports"):
@@ -712,15 +760,31 @@ class CTRL(App):
                 with ScrollableContainer(id="sysmon-container"):
                     yield Static("", id="sysmon-display")
 
-            # ── Journal ──
-            with TabPane("Journal", id="tab-journal"):
-                with Vertical(id="journal-container"):
-                    yield ScrollableContainer(id="journal-display")
-                    with Horizontal(id="journal-input-bar"):
-                        yield Input(placeholder="log an entry... (auto-timestamped to Obsidian daily note)", id="journal-input")
-                        yield Button("log", id="btn-journal")
+            # ── Launch ──
+            with TabPane("Launch", id="tab-launch"):
+                with ScrollableContainer(id="launch-container"):
+                    yield Static("[bold #3b82f6]Claude Code Sessions[/]  [dim](opens in new terminal)[/]\n")
+                    yield Button("Poker Club Manager (PCM)", id="launch-pcm")
+                    yield Button("PCM DSkipP", id="launch-pcm-dskip")
+                    yield Button("X Manager", id="launch-xmanager")
+                    yield Button("Crewchief Claude", id="launch-crewchief")
+                    yield Button("Crewchief App", id="launch-crewchief-app")
+                    yield Button("ShiftPay", id="launch-shiftpay")
+                    yield Button("ReviewPush", id="launch-reviewpush")
+                    yield Button("NBA Bots 2026", id="launch-nbabots")
+                    yield Button("Paper Bets", id="launch-paperbets")
+                    yield Button("Planner", id="launch-planner")
+                    yield Rule()
+                    yield Static("[bold #3b82f6]Bots[/]\n")
+                    yield Button("Start All Bots", id="launch-startbots")
+                    yield Button("Stop All Bots", id="launch-stopbots")
+                    yield Rule()
+                    yield Static("[bold #3b82f6]Apps[/]\n")
+                    yield Button("Obsidian", id="launch-obsidian")
+                    yield Button("File Explorer", id="launch-explorer")
+                    yield Button("Task Manager", id="launch-taskmgr")
 
-            # ── Hotkeys ──
+            # ── Keys ──
             with TabPane("Keys", id="tab-hotkeys"):
                 with ScrollableContainer(id="hotkeys-container"):
                     yield Static("", id="hotkeys-display")
@@ -731,23 +795,17 @@ class CTRL(App):
                     yield DataTable(id="skills-table")
                     yield Static("\n[dim]press r to refresh star counts from github[/]", id="skills-hint")
 
-            # ── Snake Game ──
+            # ── Snake ──
             with TabPane("Snake", id="tab-snake"):
                 yield SnakeGame()
 
-            # ── Launch ──
-            with TabPane("Launch", id="tab-launch"):
-                with Vertical(id="launch-container"):
-                    yield Static("[bold #3b82f6]Launch Sessions[/]\n")
-                    yield Button("PCM / ShiftPay", id="launch-pcm")
-                    yield Button("Poker Software", id="launch-poker")
-                    yield Button("Crewchief", id="launch-crewchief")
-                    yield Button("X Manager", id="launch-xmanager")
-                    yield Button("Sports Bets", id="launch-sportsbets")
-                    yield Rule()
-                    yield Button("Obsidian", id="launch-obsidian")
-                    yield Button("File Explorer", id="launch-explorer")
-                    yield Button("Task Manager", id="launch-taskmgr")
+            # ── Shell (last) ──
+            with TabPane("Shell", id="tab-shell"):
+                with Vertical(id="shell-container"):
+                    yield RichLog(id="shell-output", highlight=True, markup=True, max_lines=500)
+                    with Horizontal(id="shell-input-bar"):
+                        yield Input(placeholder="$ run a command...", id="shell-input")
+                        yield Button("run", id="btn-shell-run")
 
         # Log
         with Container(id="log-panel"):
@@ -761,6 +819,7 @@ class CTRL(App):
         self._setup_projects_table()
         self._setup_hotkeys()
         self._setup_skills_table()
+        self._setup_notes_table()
         self._load_todays_journal()
         self.refresh_ports()
         self._update_sysmon()
@@ -811,6 +870,64 @@ class CTRL(App):
     def _bar(pct: float, width: int = 30) -> str:
         filled = int(pct / 100 * width)
         return "█" * filled + "░" * (width - filled)
+
+    # ─────────────────────────────────────────
+    #  Notes (Obsidian Vault Browser)
+    # ─────────────────────────────────────────
+
+    def _setup_notes_table(self, filter_text: str = "") -> None:
+        """Scan Obsidian vault and list notes."""
+        table = self.query_one("#notes-table", DataTable)
+        table.clear(columns=True)
+        table.add_columns("Note", "Folder", "Modified", "Size")
+
+        vault = OBSIDIAN_VAULT
+        notes = []
+        for md_file in vault.rglob("*.md"):
+            # Skip .obsidian folder
+            if ".obsidian" in str(md_file):
+                continue
+            rel = md_file.relative_to(vault)
+            folder = str(rel.parent) if str(rel.parent) != "." else "/"
+            name = md_file.stem
+            # Filter
+            if filter_text and filter_text.lower() not in str(rel).lower():
+                continue
+            try:
+                stat = md_file.stat()
+                modified = datetime.fromtimestamp(stat.st_mtime).strftime("%m/%d %H:%M")
+                size_kb = round(stat.st_size / 1024, 1)
+                size = f"{size_kb}k" if size_kb >= 1 else f"{stat.st_size}b"
+            except Exception:
+                modified = "?"
+                size = "?"
+            notes.append((name, folder, modified, size, stat.st_mtime if stat else 0))
+
+        # Sort by most recently modified
+        notes.sort(key=lambda x: x[4], reverse=True)
+        for name, folder, modified, size, _ in notes[:200]:
+            table.add_row(name, folder, modified, size)
+
+        self._log(f"notes: found {len(notes)} in vault")
+
+    def _open_note_in_obsidian(self) -> None:
+        """Open the selected note in Obsidian."""
+        try:
+            table = self.query_one("#notes-table", DataTable)
+            row_key = table.cursor_row
+            if row_key is not None:
+                name = table.get_cell_at((row_key, 0))
+                folder = table.get_cell_at((row_key, 1))
+                if folder == "/":
+                    rel_path = f"{name}.md"
+                else:
+                    rel_path = f"{folder}/{name}.md"
+                # Use obsidian:// URI to open directly
+                uri = f"obsidian://open?vault=notes&file={rel_path}"
+                subprocess.Popen(["cmd", "/c", "start", uri], shell=True)
+                self._log(f"opening {rel_path} in obsidian")
+        except Exception as e:
+            self._log(f"[yellow]couldn't open note: {e}[/]")
 
     # ─────────────────────────────────────────
     #  Journal (Obsidian Daily Notes)
@@ -980,10 +1097,10 @@ class CTRL(App):
         table = self.query_one("#projects-table", DataTable)
         table.add_columns("Project", "Stack", "Branch", "Status")
         projects = [
-            ("Poker Software", r"C:\Users\Cmcna\Dev\projects\poker-software", "Vite + Python"),
             ("X Manager", r"C:\Users\Cmcna\Dev\projects\x-manager", "Vite + FastAPI"),
             ("ShiftPay", r"C:\Users\Cmcna\Dev\projects\shiftpay", "React + Supabase"),
             ("Poker Club Manager", r"C:\Users\Cmcna\Dev\projects\poker-manager", "Electron + Python"),
+            ("PCM Jan27 Extract", r"C:\Users\Cmcna\Dev\projects\JAN27TH_EXTRACT", "Electron + Python"),
             ("Crewchief", r"C:\Users\Cmcna\Dev\projects\crewchief", "Flet + FastAPI"),
             ("Client Workspace", r"C:\Users\Cmcna\Dev\projects\client-workspace", "HTML + CF Worker"),
             ("Content Machine", r"C:\Users\Cmcna\Dev\projects\content-machine", "Python pipeline"),
@@ -1193,6 +1310,9 @@ class CTRL(App):
             event.input.value = ""
             self._run_shell_command(cmd)
 
+        elif event.input.id == "notes-search":
+            self._setup_notes_table(event.value.strip())
+
         elif event.input.id == "journal-input" and event.value.strip():
             entry = event.value.strip()
             event.input.value = ""
@@ -1211,6 +1331,8 @@ class CTRL(App):
             inp = self.query_one("#shell-input", Input)
             if inp.value.strip():
                 self.on_input_submitted(Input.Submitted(inp, inp.value))
+        elif bid == "btn-notes-open":
+            self._open_note_in_obsidian()
         elif bid == "btn-journal":
             inp = self.query_one("#journal-input", Input)
             if inp.value.strip():
@@ -1299,8 +1421,12 @@ class CTRL(App):
         elif target in SHORTCUTS:
             path = SHORTCUTS[target]
             if Path(path).exists():
-                subprocess.Popen(["cmd", "/c", "start", path], shell=True)
-                self._log(f"launching {target}")
+                # Open in a NEW Windows Terminal window
+                subprocess.Popen(
+                    ["wt", "--window", "new", "cmd", "/c", path],
+                    shell=True,
+                )
+                self._log(f"launching {target} in new terminal")
             else:
                 self._log(f"[yellow]shortcut missing: {path}[/]")
 
