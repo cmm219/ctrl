@@ -747,20 +747,12 @@ class CTRL(App):
         with TabbedContent():
             # ── Chat ──
             with TabPane("Chat", id="tab-chat"):
-                if not self.config.get("api_key"):
-                    with Container(id="setup-container"):
-                        with Vertical(id="setup-box"):
-                            yield Static("[bold #3b82f6]CTRL[/] [dim]Terminal Command Center[/]\n")
-                            yield Static("Enter your Anthropic API key to connect.\n[dim]https://console.anthropic.com/settings/keys[/]\n")
-                            yield Input(placeholder="sk-ant-...", id="api-key-input", password=True)
-                            yield Button("Connect", id="btn-save-key")
-                else:
-                    with Vertical(id="chat-container"):
-                        yield ScrollableContainer(id="chat-messages")
-                        yield Static("", id="streaming-indicator")
-                        with Horizontal(id="chat-input-bar"):
-                            yield Input(placeholder="message claude... (enter to send, /help for commands)", id="chat-input")
-                            yield Button(">>", id="btn-send")
+                with Vertical(id="chat-container"):
+                    yield ScrollableContainer(id="chat-messages")
+                    yield Static("", id="streaming-indicator")
+                    with Horizontal(id="chat-input-bar"):
+                        yield Input(placeholder="message claude... (enter to send, /help for commands)", id="chat-input")
+                        yield Button(">>", id="btn-send")
 
             # ── Journal ──
             with TabPane("Journal", id="tab-journal"):
@@ -864,11 +856,16 @@ class CTRL(App):
         self.set_interval(30, self.refresh_ports)
         self.set_interval(10, self._update_sysmon)
 
-        if self.config.get("api_key"):
-            self._log("Claude API connected")
-            self._add_system_message("connected. type a message or /help for commands.")
+        mode = self.config.get("chat_mode", "cli")
+        if mode == "cli":
+            self._log("chat mode: CLI (uses your claude subscription)")
+            self._add_system_message("using claude CLI (free). type a message or /help for commands.")
+        elif self.config.get("api_key"):
+            self._log("chat mode: API (connected)")
+            self._add_system_message("using claude API. type a message or /help for commands.")
         else:
-            self._log("[yellow]no API key — set one in Chat tab[/]")
+            self._log("chat mode: API (no key set — use /api-key or /mode to switch to CLI)")
+            self._add_system_message("no api key. type /mode to switch to CLI (free) or /api-key to set key.")
 
     # ─────────────────────────────────────────
     #  System Monitor
@@ -1247,17 +1244,60 @@ class CTRL(App):
     @work(thread=True)
     def _send_to_claude(self, user_message: str) -> None:
         self.messages.append({"role": "user", "content": user_message})
-        sys_prompt = (
-            "You are Claude inside CTRL, a terminal command center. "
-            "Be concise, direct, and useful. The user is a developer "
-            "working on multiple projects. Use markdown formatting."
-        )
+        mode = self.config.get("chat_mode", "cli")  # "cli" or "api"
 
-        # Claude response
+        if mode == "api" and self.config.get("api_key"):
+            self._send_via_api(user_message)
+        else:
+            self._send_via_cli(user_message)
+
+        # GPT response (if enabled)
+        if self.config.get("gpt_enabled") and self.config.get("openai_key"):
+            self._send_to_gpt()
+
+        self.app.call_from_thread(self._set_streaming_indicator, "")
+
+    def _send_via_cli(self, user_message: str) -> None:
+        """Send message through claude CLI (uses your subscription, no API cost)."""
+        try:
+            self.app.call_from_thread(self._set_streaming_indicator, "claude thinking...")
+
+            result = subprocess.run(
+                ["claude", "--print", "--model", "sonnet", user_message],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=r"C:\Users\Cmcna\Dev",
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                reply = result.stdout.strip()
+                self.messages.append({"role": "assistant", "content": reply})
+                self.app.call_from_thread(self._add_chat_message, "assistant", reply)
+                self.app.call_from_thread(self._log, "claude: responded (cli)")
+            else:
+                err = result.stderr.strip()[:120] if result.stderr else "no response"
+                self.app.call_from_thread(self._add_system_message, f"claude error: {err}")
+
+        except subprocess.TimeoutExpired:
+            self.app.call_from_thread(self._add_system_message, "claude timed out (120s)")
+        except FileNotFoundError:
+            self.app.call_from_thread(self._add_system_message, "claude CLI not found. run: npm install -g @anthropic-ai/claude-code")
+        except Exception as e:
+            self.app.call_from_thread(self._add_system_message, f"error: {str(e)[:120]}")
+
+    def _send_via_api(self, user_message: str) -> None:
+        """Send message through Anthropic API (costs money)."""
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=self.config["api_key"])
-            self.app.call_from_thread(self._set_streaming_indicator, "claude thinking...")
+            self.app.call_from_thread(self._set_streaming_indicator, "claude thinking (api)...")
+
+            sys_prompt = (
+                "You are Claude inside CTRL, a terminal command center. "
+                "Be concise, direct, and useful. The user is a developer "
+                "working on multiple projects. Use markdown formatting."
+            )
 
             response = client.messages.create(
                 model=self.config.get("model", CLAUDE_MODEL),
@@ -1268,40 +1308,39 @@ class CTRL(App):
 
             reply = response.content[0].text
             self.messages.append({"role": "assistant", "content": reply})
-
             self.app.call_from_thread(self._add_chat_message, "assistant", reply)
-            self.app.call_from_thread(self._log, f"claude: {response.usage.output_tokens} tokens")
+            self.app.call_from_thread(self._log, f"claude: {response.usage.output_tokens} tokens (api)")
 
         except Exception as e:
-            err = str(e)[:120]
-            self.app.call_from_thread(self._add_system_message, f"claude error: {err}")
+            self.app.call_from_thread(self._add_system_message, f"api error: {str(e)[:120]}")
 
-        # GPT response (if enabled)
-        if self.config.get("gpt_enabled") and self.config.get("openai_key"):
-            try:
-                import openai
-                gpt_client = openai.OpenAI(api_key=self.config["openai_key"])
-                self.app.call_from_thread(self._set_streaming_indicator, "gpt thinking...")
+    def _send_to_gpt(self) -> None:
+        """Send to GPT if enabled."""
+        try:
+            import openai
+            sys_prompt = (
+                "You are GPT inside CTRL, a terminal command center. "
+                "Be concise, direct, and useful. Use markdown formatting."
+            )
+            gpt_client = openai.OpenAI(api_key=self.config["openai_key"])
+            self.app.call_from_thread(self._set_streaming_indicator, "gpt thinking...")
 
-                gpt_messages = [{"role": "system", "content": sys_prompt}]
-                gpt_messages.extend(self.messages)
+            gpt_messages = [{"role": "system", "content": sys_prompt}]
+            gpt_messages.extend(self.messages)
 
-                gpt_response = gpt_client.chat.completions.create(
-                    model=GPT_MODEL,
-                    max_tokens=4096,
-                    messages=gpt_messages,
-                )
+            gpt_response = gpt_client.chat.completions.create(
+                model=GPT_MODEL,
+                max_tokens=4096,
+                messages=gpt_messages,
+            )
 
-                gpt_reply = gpt_response.choices[0].message.content
-                self.app.call_from_thread(self._add_gpt_message, gpt_reply)
-                tokens = gpt_response.usage.completion_tokens if gpt_response.usage else "?"
-                self.app.call_from_thread(self._log, f"gpt: {tokens} tokens")
+            gpt_reply = gpt_response.choices[0].message.content
+            self.app.call_from_thread(self._add_gpt_message, gpt_reply)
+            tokens = gpt_response.usage.completion_tokens if gpt_response.usage else "?"
+            self.app.call_from_thread(self._log, f"gpt: {tokens} tokens")
 
-            except Exception as e:
-                err = str(e)[:120]
-                self.app.call_from_thread(self._add_system_message, f"gpt error: {err}")
-
-        self.app.call_from_thread(self._set_streaming_indicator, "")
+        except Exception as e:
+            self.app.call_from_thread(self._add_system_message, f"gpt error: {str(e)[:120]}")
 
     def _add_gpt_message(self, content: str) -> None:
         """Add a GPT response message to chat."""
@@ -1417,8 +1456,6 @@ class CTRL(App):
             event.input.value = ""
             self._journal_entry(entry)
 
-        elif event.input.id == "api-key-input" and event.value.strip():
-            self._save_api_key(event.value.strip())
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle double-click / enter on a table row."""
@@ -1479,6 +1516,21 @@ class CTRL(App):
         elif cmd == "/git":
             self._run_shell_command("git status")
             self._add_system_message("running git status in shell tab...")
+        elif cmd == "/mode":
+            current = self.config.get("chat_mode", "cli")
+            new_mode = "api" if current == "cli" else "cli"
+            self.config["chat_mode"] = new_mode
+            save_config(self.config)
+            label = "CLI (your subscription, free)" if new_mode == "cli" else "API (costs money)"
+            self._add_system_message(f"chat mode: {label}")
+            self._log(f"chat mode switched to {new_mode}")
+        elif cmd == "/api-key":
+            self._add_system_message("usage: /api-key sk-ant-...")
+        elif cmd.startswith("/api-key "):
+            key = cmd.split(" ", 1)[1].strip()
+            self.config["api_key"] = key
+            save_config(self.config)
+            self._add_system_message("anthropic api key saved. use /mode to switch to api mode.")
         elif cmd == "/gpt":
             enabled = self.config.get("gpt_enabled", False)
             self.config["gpt_enabled"] = not enabled
@@ -1498,13 +1550,17 @@ class CTRL(App):
                 self._add_system_message(f"logged to journal: {entry[:50]}...")
         elif cmd == "/help":
             gpt_status = "ON" if self.config.get("gpt_enabled") else "OFF"
+            chat_mode = self.config.get("chat_mode", "cli")
+            mode_label = "CLI (free)" if chat_mode == "cli" else "API (paid)"
             self._add_system_message(
                 "/clear — clear chat\n"
-                "/ports — scan ports\n"
+                f"/mode — switch chat mode (current: {mode_label})\n"
+                "/api-key <key> — set anthropic api key\n"
                 "/model — current model\n"
                 "/model <id> — switch model\n"
                 f"/gpt — toggle gpt responses ({gpt_status})\n"
                 "/gpt-key <key> — set openai api key\n"
+                "/ports — scan ports\n"
                 "/sys — refresh system stats\n"
                 "/git — run git status\n"
                 "/log <text> — add journal entry\n"
